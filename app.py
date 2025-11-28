@@ -1,114 +1,82 @@
-from flask import Flask, render_template, request, redirect, session
-import sqlite3
+from flask import Flask, request, redirect, url_for, session, flash, send_from_directory, jsonify
+import os
 
 app = Flask(__name__)
-app.secret_key = "secret123"
+app.secret_key = "change-this-to-a-secure-random-value"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def connect():
-    return sqlite3.connect("database.db")
+# Simple in-memory stores (replace with DB in production)
+users = {}          # key: email -> {name, password}
+submissions = []    # list of {title, content, author_email}
 
-conn = connect()
-cursor = conn.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, username TEXT, password TEXT, role TEXT)")
-cursor.execute("CREATE TABLE IF NOT EXISTS projects(id INTEGER PRIMARY KEY, title TEXT, assigned_to INTEGER, status TEXT, submission TEXT)")
-conn.commit()
-conn.close()
+# Serve top-level static HTML files from repo root
+@app.route("/")
+def index():
+    return send_from_directory(BASE_DIR, "index.html")
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+@app.route("/login.html")
+def login_page():
+    return send_from_directory(BASE_DIR, "login.html")
 
-@app.route('/register', methods=['GET','POST'])
+@app.route("/register.html")
+def register_page():
+    return send_from_directory(BASE_DIR, "register.html")
+
+@app.route("/submit.html")
+def submit_page():
+    return send_from_directory(BASE_DIR, "submit.html")
+
+@app.route("/admin.html")
+def admin_page():
+    return send_from_directory(BASE_DIR, "admin.html")
+
+@app.route("/styles.css")
+def styles():
+    return send_from_directory(BASE_DIR, "styles.css")
+
+# Form endpoints
+@app.route("/register", methods=["POST"])
 def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        role = 'programmer'
+    email = request.form.get("email")
+    name = request.form.get("name")
+    password = request.form.get("password")
+    if not email or not password:
+        flash("Email and password required")
+        return redirect(url_for("register_page"))
+    if email in users:
+        flash("User already exists")
+        return redirect(url_for("register_page"))
+    users[email] = {"name": name, "password": password}
+    session["user"] = email
+    return redirect(url_for("index"))
 
-        conn = connect()
-        c = conn.cursor()
-        c.execute("INSERT INTO users(username,password,role) VALUES(?,?,?)", (username,password,role))
-        conn.commit()
-        conn.close()
-
-        return redirect('/login')
-
-    return render_template('register.html')
-
-@app.route('/login', methods=['GET','POST'])
+@app.route("/login", methods=["POST"])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+    email = request.form.get("email")
+    password = request.form.get("password")
+    user = users.get(email)
+    if not user or user.get("password") != password:
+        flash("Invalid credentials")
+        return redirect(url_for("login_page"))
+    session["user"] = email
+    return redirect(url_for("index"))
 
-        conn = connect()
-        c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE username=? AND password=?", (username,password))
-        user = c.fetchone()
-        conn.close()
+@app.route("/submit", methods=["POST"])
+def submit():
+    if "user" not in session:
+        flash("Please log in to submit")
+        return redirect(url_for("login_page"))
+    title = request.form.get("title")
+    content = request.form.get("content")
+    submissions.append({"title": title, "content": content, "author": session["user"]})
+    return redirect(url_for("index"))
 
-        if user:
-            session['user'] = user
-            if user[3] == 'admin':
-                return redirect('/admin')
-            return redirect('/dashboard')
+# Very small admin endpoint to list submissions as JSON (protect appropriately)
+@app.route("/admin/submissions")
+def admin_submissions():
+    if session.get("user") != "admin@example.com":
+        return jsonify({"error": "forbidden"}), 403
+    return jsonify(submissions)
 
-    return render_template('login.html')
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user' not in session:
-        return redirect('/login')
-
-    conn = connect()
-    c = conn.cursor()
-    c.execute("SELECT * FROM projects WHERE assigned_to=?", (session['user'][0],))
-    assigned = c.fetchall()
-    conn.close()
-
-    return render_template('dashboard.html', projects=assigned)
-
-@app.route('/submit/<int:id>', methods=['GET','POST'])
-def submit(id):
-    if request.method == 'POST':
-        submission = request.form['submission']
-
-        conn = connect()
-        c = conn.cursor()
-        c.execute("UPDATE projects SET submission=?, status='submitted' WHERE id=?", (submission,id))
-        conn.commit()
-        conn.close()
-
-        return redirect('/dashboard')
-
-    return render_template('submit.html', id=id)
-
-@app.route('/admin', methods=['GET','POST'])
-def admin():
-    if 'user' not in session or session['user'][3] != 'admin':
-        return redirect('/login')
-
-    conn = connect()
-    c = conn.cursor()
-    c.execute("SELECT id, username FROM users WHERE role='programmer'")
-    programmers = c.fetchall()
-    c.execute("SELECT * FROM projects")
-    projects = c.fetchall()
-    conn.close()
-
-    return render_template('admin.html', programmers=programmers, projects=projects)
-
-@app.route('/assign', methods=['POST'])
-def assign():
-    title = request.form['title']
-    programmer = request.form['programmer']
-
-    conn = connect()
-    c = conn.cursor()
-    c.execute("INSERT INTO projects(title,assigned_to,status,submission) VALUES(?,?,?,?)", (title,programmer,'assigned',''))
-    conn.commit()
-    conn.close()
-
-    return redirect('/admin')
-
-app.run(debug=True)
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)

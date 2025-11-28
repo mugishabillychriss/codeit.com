@@ -1,5 +1,36 @@
-<h2>Submit Your Work</h2>
-<form method="POST">
-<textarea name="submission" placeholder="Paste your work here" required></textarea>
-<button type="submit">Submit</button>
-</form>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CodeIt - Submit</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/">CodeIt</a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/submit.html">Submit</a>
+        <a href="/login.html">Login</a>
+        <a href="/register.html">Register</a>
+        <a href="/admin.html">Admin</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <h2>Submit content</h2>
+    <form action="/submit" method="post" class="form">
+      <label>Title
+        <input type="text" name="title" required />
+      </label>
+      <label>Content
+        <textarea name="content" rows="6" required></textarea>
+      </label>
+      <button type="submit">Submit</button>
+    </form>
+  </main>
+</body>
+</html>

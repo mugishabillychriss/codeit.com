@@ -1,20 +1,29 @@
-<h2>Admin Dashboard</h2>
-<h3>Assign New Project</h3>
-<form method="POST" action="/assign">
-<input name="title" placeholder="Project Title" required>
-<select name="programmer">
-    {% for p in programmers %}
-    <option value="{{p[0]}}">{{p[1]}}</option>
-    {% endfor %}
-</select>
-<button type="submit">Assign</button>
-</form>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CodeIt - Admin</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a class="brand" href="/">CodeIt</a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/submit.html">Submit</a>
+        <a href="/login.html">Login</a>
+        <a href="/register.html">Register</a>
+        <a href="/admin.html">Admin</a>
+      </div>
+    </nav>
+  </header>
 
-<h3>All Projects</h3>
-{% for p in projects %}
-<div>
-    <p>Title: {{p[1]}}</p>
-    <p>Status: {{p[3]}}</p>
-    <p>Submission: {{p[4]}}</p>
-</div>
-{% endfor %}
+  <main class="container">
+    <h2>Admin panel</h2>
+    <p>This page should be restricted. The example Flask app trusts a session value 'user' — replace with proper auth for production.</p>
+    <p><a href="/login.html">Log in as admin</a></p>
+  </main>
+</body>
+</html>
